@@ -1,5 +1,5 @@
 # ==============================================
-# DISTRACTION.ps1 - COM LOGS E JANELA VISÍVEL
+# DISTRACTION.ps1 - COM LOGS E FORMULÁRIO DIRETO
 # ==============================================
 
 "$(Get-Date) - DISTRACTION.ps1 iniciado" | Out-File "$env:TEMP\distraction_log.txt" -Append
@@ -14,9 +14,9 @@ try {
     $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
     $graphics.CopyFromScreen($screen.X, $screen.Y, 0, 0, $screen.Size)
     $graphics.Dispose()
-    "$(Get-Date) - Print capturado com sucesso." | Out-File "$env:TEMP\distraction_log.txt" -Append
+    "$(Get-Date) - Print capturado." | Out-File "$env:TEMP\distraction_log.txt" -Append
 } catch {
-    "$(Get-Date) - ERRO ao capturar print: $_" | Out-File "$env:TEMP\distraction_log.txt" -Append
+    "$(Get-Date) - ERRO no print: $_" | Out-File "$env:TEMP\distraction_log.txt" -Append
     exit 1
 }
 
@@ -36,17 +36,16 @@ try {
 }
 
 $flagFile = "$env:TEMP\ov.stop"
-# Timeout de 10 segundos para teste
 $timeout = 10
 $startTime = Get-Date
 
 while ($true) {
     if ($timeout -and ((Get-Date) - $startTime -gt (New-TimeSpan -Seconds $timeout))) {
-        "$(Get-Date) - Timeout de 10 segundos atingido. Criando flag artificial." | Out-File "$env:TEMP\distraction_log.txt" -Append
+        "$(Get-Date) - Timeout de 10 segundos. Criando flag." | Out-File "$env:TEMP\distraction_log.txt" -Append
         New-Item -Path $flagFile -ItemType File -Force | Out-Null
     }
     if (Test-Path $flagFile) {
-        "$(Get-Date) - Flag detectada. Encerrando distração." | Out-File "$env:TEMP\distraction_log.txt" -Append
+        "$(Get-Date) - Flag detectada. Saindo." | Out-File "$env:TEMP\distraction_log.txt" -Append
         break
     }
     Start-Sleep -Milliseconds 200

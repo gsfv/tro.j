@@ -15,6 +15,8 @@ $form.BackgroundImage = $bitmap
 $form.BackgroundImageLayout = [System.Windows.Forms.ImageLayout]::Stretch
 $form.Show()
 
+$form.ShowInTaskbar = $false
+
 $flagFile = "$env:TEMP\ov.stop"
 $timeout = 10   # 10 segundos para teste
 $startTime = Get-Date

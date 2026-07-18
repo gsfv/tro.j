@@ -21,8 +21,8 @@ $flagFile = "$env:TEMP\ov.stop"
 # ⏱️ BLOCO DE TIMEOUT (PARA TESTES) – 10 SEGUNDOS
 # ==============================================
 # 🟢 Descomente as 3 linhas abaixo para ativar timeout de 10 segundos
-# $timeout = 10
-# $startTime = Get-Date
+ $timeout = 10
+ $startTime = Get-Date
 # ==============================================
 
 while ($true) {

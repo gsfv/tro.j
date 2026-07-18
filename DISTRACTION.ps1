@@ -25,16 +25,6 @@ $form.BackgroundImage = $bitmap
 $form.BackgroundImageLayout = [System.Windows.Forms.ImageLayout]::Stretch
 $form.ShowInTaskbar = $false        # <--- SOME DO ALT+TAB
 
-# --- ADICIONA UM TEXTO DE DISTRAÇÃO (opcional, mas dá o charme) ---
-$label = New-Object System.Windows.Forms.Label
-$label.Text = "🔒 Atualizando sistema...`nNão desligue o computador."
-$label.ForeColor = [System.Drawing.Color]::White
-$label.Font = New-Object System.Drawing.Font("Segoe UI", 28, [System.Drawing.FontStyle]::Bold)
-$label.AutoSize = $false
-$label.Size = $form.Size
-$label.TextAlign = [System.Drawing.ContentAlignment]::MiddleCenter
-$form.Controls.Add($label)
-
 # --- BLOQUEIA ALT+F4 (para não fechar manualmente) ---
 $form.Add_KeyDown({
     if ($_.Alt -and $_.KeyCode -eq 'F4') {

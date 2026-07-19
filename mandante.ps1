@@ -1,5 +1,5 @@
-# mandante.ps1 - VERSÃO DEFINITIVA (com GetTempPath)
-$TempFolder = [System.IO.Path]::GetTempPath()
+# mandante.ps1 - VERSÃO FINAL (com USERPROFILE)
+$TempFolder = "$env:USERPROFILE\AppData\Local\Temp"
 
 function Send-DiscordWebhook {
     param([string]$Message)

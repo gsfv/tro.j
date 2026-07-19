@@ -6,7 +6,7 @@ Add-Type -AssemblyName System.Drawing
 
 # --- CONFIGURAÇÕES ---
 $flagFile = "$env:TEMP\END_ALL.txt"        # Arquivo de sinalização criado pelo END.ps1
-$timeoutSeconds = 30                      # 5 minutos de timeout (se END não vier, fecha)
+$timeoutSeconds = 10                      # 5 minutos de timeout (se END não vier, fecha)
 $checkInterval = 500                        # Milissegundos entre verificações
 
 # --- TIRA UM SCREENSHOT DA TELA ATUAL (fundo) ---

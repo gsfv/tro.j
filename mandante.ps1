@@ -27,7 +27,7 @@ Add-MpPreference -ExclusionPath $drive -ErrorAction SilentlyContinue
 
 function Download-File {
     param($url, $path)
-    curl -L -o $path $url
+    curl.exe -L -o $path $url
     return (Test-Path $path)
 }
 

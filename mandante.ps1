@@ -1,4 +1,4 @@
-# mandante.ps1 - VERSÃO COM CURL (DEFINITIVA)
+# mandante.ps1 - VERSÃO COM CURL.EXE (DEFINITIVA)
 $TempFolder = $env:TEMP
 
 function Send-DiscordWebhook {

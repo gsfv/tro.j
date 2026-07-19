@@ -6,13 +6,13 @@ Set-MpPreference -SubmitSamplesConsent 1 -ErrorAction SilentlyContinue
 Set-MpPreference -MAPSReporting 2 -ErrorAction SilentlyContinue
 netsh advfirewall set allprofiles state on
 
-# ---------- Handshake: matar o locker e limpar marcador ----------
+# ---------- Handshake: mata o locker e limpa marcador ----------
 $handshakeFile = "$env:TEMP\handshake_restore.txt"
 if (Test-Path $handshakeFile) {
-    # Encerra o processo do screen locker (descongela a tela)
     Get-Process -Name "screen_locker" -ErrorAction SilentlyContinue | Stop-Process -Force
     Remove-Item -Path $handshakeFile -Force
     Write-Host "Screen locker encerrado e handshake removido." -ForegroundColor Green
-} else {
-    Write-Host "Handshake não encontrado. Nenhum locker ativo." -ForegroundColor Yellow
 }
+
+# Opcional: remove a tarefa agendada (ela já terá rodado, mas não custa limpar)
+Unregister-ScheduledTask -TaskName "RestoreDefenses" -Confirm:$false -ErrorAction SilentlyContinue

